@@ -1,0 +1,250 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JioPedia - Knowledge for Everyone</title>
+<meta name="description" content="Explore people, history, science, technology and more with JioPedia.">
+<meta name="theme-color" content="#2457a7">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6fa;
+  color: #202122;
+}
+
+header {
+  background: white;
+  padding: 25px 15px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+.logo {
+  font-family: Georgia, serif;
+  font-size: 38px;
+  font-weight: bold;
+  color: #2457a7;
+}
+
+header p { color: #666; }
+
+.container {
+  max-width: 850px;
+  margin: 30px auto;
+  padding: 16px;
+}
+
+.search-box {
+  display: flex;
+  gap: 9px;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #a2a9b1;
+  border-radius: 7px;
+  font-size: 16px;
+}
+
+button {
+  background: #2457a7;
+  color: white;
+  border: 0;
+  border-radius: 7px;
+  padding: 14px 22px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover { background: #173f80; }
+
+#status {
+  margin: 22px 0;
+  color: #54595d;
+}
+
+.result {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  margin: 13px 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #e9edf4;
+  flex-shrink: 0;
+}
+
+.result-content { flex: 1; min-width: 0; }
+
+.result h3 {
+  margin: 3px 0 10px;
+  color: #2457a7;
+}
+
+.result p {
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.result a {
+  color: #2457a7;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.result a:hover { text-decoration: underline; }
+
+footer {
+  text-align: center;
+  color: #666;
+  padding: 25px 12px;
+}
+
+@media(max-width: 480px) {
+  .logo { font-size: 33px; }
+  .search-box { flex-direction: column; }
+  .search-box button { width: 100%; }
+  .result { gap: 10px; padding: 10px; }
+  .thumb { width: 90px; height: 100px; }
+  .result h3 { font-size: 17px; }
+  .result p { font-size: 14px; }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="logo">JioPedia</div>
+  <p>Discover Knowledge. Explore the World.</p>
+</header>
+
+<main class="container">
+  <h2>Search Any Topic</h2>
+  <p>Explore people, places, history, science and technology.</p>
+
+  <form class="search-box" id="searchForm">
+    <input id="query" type="search"
+      placeholder="Search anything..."
+      aria-label="Search articles" required>
+    <button type="submit">Search</button>
+  </form>
+
+  <div id="status" aria-live="polite"></div>
+  <div id="results"></div>
+</main>
+
+<footer>JioPedia | Knowledge for Everyone</footer>
+
+<script>
+const form = document.getElementById("searchForm");
+const queryInput = document.getElementById("query");
+const statusBox = document.getElementById("status");
+const resultsBox = document.getElementById("results");
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const query = queryInput.value.trim();
+  if (!query) return;
+
+  statusBox.textContent = "Searching JioPedia...";
+  resultsBox.replaceChildren();
+
+  try {
+    const params = new URLSearchParams({
+      action: "query",
+      generator: "search",
+      gsrsearch: query,
+      gsrnamespace: "0",
+      gsrlimit: "10",
+      prop: "extracts|pageimages",
+      exintro: "1",
+      explaintext: "1",
+      exsentences: "3",
+      piprop: "thumbnail",
+      pithumbsize: "320",
+      format: "json",
+      origin: "*"
+    });
+
+    const response = await fetch(
+      "https://en.wikipedia.org/w/api.php?" + params
+    );
+
+    if (!response.ok) throw new Error("Search failed");
+
+    const data = await response.json();
+    const pages = Object.values(data.query?.pages || {})
+      .sort((a, b) => a.index - b.index);
+
+    if (!pages.length) {
+      statusBox.textContent = "No articles found. Try another topic.";
+      return;
+    }
+
+    statusBox.textContent =
+      "Found " + pages.length + " articles.";
+
+    pages.forEach(page => {
+      const card = document.createElement("article");
+      card.className = "result";
+
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.alt = "Image for " + page.title;
+      img.loading = "lazy";
+
+      img.src = page.thumbnail?.source ||
+        "https://placehold.co/240x240/e9edf4/52627a?text=JioPedia";
+
+      img.onerror = () => {
+        img.onerror = null;
+        img.src =
+          "https://placehold.co/240x240/e9edf4/52627a?text=JioPedia";
+      };
+
+      const content = document.createElement("div");
+      content.className = "result-content";
+
+      const title = document.createElement("h3");
+      title.textContent = page.title;
+
+      const description = document.createElement("p");
+      description.textContent = page.extract ||
+        "Open the full article to learn more.";
+
+      const link = document.createElement("a");
+      link.href = "https://en.wikipedia.org/?curid=" + page.pageid;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Read Full Article →";
+
+      content.append(title, description, link);
+      card.append(img, content);
+      resultsBox.appendChild(card);
+    });
+
+  } catch (error) {
+    statusBox.textContent =
+      "Search failed. Check your internet and try again.";
+  }
+});
+</script>
+</body>
+</html>
